@@ -20,6 +20,7 @@ type Field struct {
 
 type Projection struct {
 	EventName string  `json:"event"`
+	Table     string  `json:"table"`
 	Fields    []Field `json:"fields"`
 }
 
@@ -57,6 +58,7 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 		// Preparing projection
 		projection := Projection{
 			EventName: eventName,
+			Table:     rule.Table,
 		}
 
 		for _, mapping := range rule.Mapping {
