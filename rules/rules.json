@@ -1,0 +1,19 @@
+{
+	"rules": [
+		{
+			"event": "userCreated",
+			"table": "users",
+			"mapping": [
+				{
+					"source": "id",
+					"target": "id",
+					"primary": true
+				},
+				{
+					"source": "name",
+					"target": "name"
+				}
+			]
+		}
+	]
+}

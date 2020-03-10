@@ -1,0 +1,6 @@
+[service]
+port = 44445
+
+[event_store]
+host = "0.0.0.0:32803"
+cluster_id = "test-cluster"
