@@ -13,6 +13,7 @@ type RuleConfig struct {
 type Rule struct {
 	Event   string          `json:"event"`
 	Table   string          `json:"table"`
+	Method  string          `json:"method"`
 	Mapping []MappingConfig `json:"mapping"`
 }
 

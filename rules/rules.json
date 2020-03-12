@@ -3,6 +3,7 @@
 		{
 			"event": "userCreated",
 			"table": "users",
+			"method": "create",
 			"mapping": [
 				{
 					"source": "id",
