@@ -3,7 +3,7 @@
 		{
 			"event": "userCreated",
 			"table": "users",
-			"method": "create",
+			"method": "update",
 			"mapping": [
 				{
 					"source": "id",
@@ -13,6 +13,18 @@
 				{
 					"source": "name",
 					"target": "name"
+				}
+			]
+		},
+		{
+			"event": "userDeleted",
+			"table": "users",
+			"method": "delete",
+			"mapping": [
+				{
+					"source": "id",
+					"target": "id",
+					"primary": true
 				}
 			]
 		}
