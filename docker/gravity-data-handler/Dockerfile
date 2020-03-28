@@ -10,4 +10,5 @@ COPY --from=builder /gravity-data-handler /gravity-data-handler
 COPY ./config/config.toml /config.toml
 COPY ./rules /rules
 COPY ./docker/gravity-data-handler/startup.sh /startup.sh
+EXPOSE 44445
 CMD ["/bin/sh", "/startup.sh"]
