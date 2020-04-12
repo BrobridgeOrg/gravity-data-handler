@@ -11,10 +11,10 @@ type RuleConfig struct {
 }
 
 type Rule struct {
-	Event   string          `json:"event"`
-	Table   string          `json:"table"`
-	Method  string          `json:"method"`
-	Mapping []MappingConfig `json:"mapping"`
+	Event      string          `json:"event"`
+	Collection string          `json:"collection"`
+	Method     string          `json:"method"`
+	Mapping    []MappingConfig `json:"mapping"`
 }
 
 type MappingConfig struct {

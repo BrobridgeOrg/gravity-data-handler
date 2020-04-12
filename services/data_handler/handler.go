@@ -19,10 +19,10 @@ type Field struct {
 }
 
 type Projection struct {
-	EventName string  `json:"event"`
-	Table     string  `json:"table"`
-	Method    string  `json:"method"`
-	Fields    []Field `json:"fields"`
+	EventName  string  `json:"event"`
+	Collection string  `json:"collection"`
+	Method     string  `json:"method"`
+	Fields     []Field `json:"fields"`
 }
 
 func CreateHandler(a app.AppImpl) *Handler {
@@ -58,9 +58,9 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 
 		// Preparing projection
 		projection := Projection{
-			EventName: eventName,
-			Table:     rule.Table,
-			Method:    rule.Method,
+			EventName:  eventName,
+			Collection: rule.Collection,
+			Method:     rule.Method,
 		}
 
 		for _, mapping := range rule.Mapping {

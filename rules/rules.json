@@ -2,7 +2,7 @@
 	"rules": [
 		{
 			"event": "userCreated",
-			"table": "users",
+			"collection": "users",
 			"method": "update",
 			"mapping": [
 				{
@@ -22,7 +22,7 @@
 		},
 		{
 			"event": "userDeleted",
-			"table": "users",
+			"collection": "users",
 			"method": "delete",
 			"mapping": [
 				{
