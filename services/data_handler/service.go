@@ -7,7 +7,8 @@ import (
 	"golang.org/x/net/context"
 
 	app "gravity-data-handler/app/interface"
-	pb "gravity-data-handler/pb"
+
+	pb "github.com/BrobridgeOrg/gravity-api/service/data_handler"
 )
 
 type Service struct {

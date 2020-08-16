@@ -8,8 +8,9 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	app "gravity-data-handler/app/interface"
-	pb "gravity-data-handler/pb"
 	data_handler "gravity-data-handler/services/data_handler"
+
+	pb "github.com/BrobridgeOrg/gravity-api/service/data_handler"
 )
 
 func (a *App) InitGRPCServer(host string) error {
