@@ -31,7 +31,7 @@ func CreateApp() *App {
 
 	host = strings.ReplaceAll(host, ".", "_")
 
-	id := fmt.Sprintf("gravity-%s", host)
+	id := fmt.Sprintf("gravity_data_handler-%s", host)
 
 	a := &App{
 		id: id,
