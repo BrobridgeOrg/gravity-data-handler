@@ -2,7 +2,10 @@ package data_handler
 
 import (
 	"encoding/json"
+	"fmt"
 	app "gravity-data-handler/app/interface"
+	"gravity-data-handler/services/data_handler/pipeline"
+	"reflect"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -10,6 +13,7 @@ import (
 type Handler struct {
 	app        app.AppImpl
 	ruleConfig *RuleConfig
+	pipeline   *pipeline.Manager
 }
 
 type Field struct {
@@ -27,8 +31,22 @@ type Projection struct {
 
 func CreateHandler(a app.AppImpl) *Handler {
 
+	// Initialize pipelines
+	opts := pipeline.NewOptions()
+	opts.Handler = func(data interface{}) error {
+
+		eb := a.GetEventBus()
+		err := eb.Emit("gravity.store.eventStored", data.([]byte))
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	return &Handler{
-		app: a,
+		app:      a,
+		pipeline: pipeline.NewManager(opts),
 	}
 }
 
@@ -46,9 +64,19 @@ func (handler *Handler) LoadRuleFile(filename string) error {
 	return nil
 }
 
-func (handler *Handler) HandleEvent(eventName string, payload map[string]interface{}) error {
+func (handler *Handler) getPrimaryValueAsString(data interface{}) string {
 
-	eb := handler.app.GetEventBus()
+	v := reflect.ValueOf(data)
+
+	switch v.Kind() {
+	case reflect.String:
+		return data.(string)
+	default:
+		return fmt.Sprintf("%v", data)
+	}
+}
+
+func (handler *Handler) HandleEvent(eventName string, payload map[string]interface{}) error {
 
 	for _, rule := range handler.ruleConfig.Rules {
 
@@ -63,9 +91,15 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 			Method:     rule.Method,
 		}
 
+		var primaryKey string
+
 		for _, mapping := range rule.Mapping {
 
 			if val, ok := payload[mapping.Source]; ok {
+
+				if mapping.Primary {
+					primaryKey = handler.getPrimaryValueAsString(val)
+				}
 
 				field := Field{
 					Name:    mapping.Target,
@@ -83,11 +117,7 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 			return err
 		}
 
-		err = eb.Emit("gravity.store.eventStored", data)
-		if err != nil {
-			return err
-		}
-
+		handler.pipeline.Push(primaryKey, data)
 	}
 
 	return nil
