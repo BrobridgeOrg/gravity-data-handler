@@ -117,7 +117,11 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 			return err
 		}
 
-		handler.pipeline.Push(primaryKey, data)
+		if primaryKey == "" {
+			handler.pipeline.Dispatch(data)
+		} else {
+			handler.pipeline.Push(primaryKey, data)
+		}
 	}
 
 	return nil

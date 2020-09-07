@@ -7,6 +7,7 @@ import (
 type Manager struct {
 	options   *Options
 	pipelines []*Pipeline
+	counter   int32
 }
 
 func NewManager(opts *Options) *Manager {
@@ -28,6 +29,7 @@ func NewManager(opts *Options) *Manager {
 	return &Manager{
 		options:   opts,
 		pipelines: pipelines,
+		counter:   0,
 	}
 }
 
@@ -38,4 +40,16 @@ func (pm *Manager) Push(key string, data interface{}) {
 
 	// Push data to pipeline
 	pm.pipelines[id].input <- data
+}
+
+func (pm *Manager) Dispatch(data interface{}) {
+
+	// Push data to pipeline
+	pm.pipelines[pm.counter].input <- data
+
+	// Update counter
+	pm.counter++
+	if pm.counter == pm.options.Caps {
+		pm.counter = 0
+	}
 }
