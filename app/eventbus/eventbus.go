@@ -72,6 +72,10 @@ func (eb *EventBus) Close() {
 	eb.client.Close()
 }
 
+func (eb *EventBus) GetConnection() *nats.Conn {
+	return eb.natsConn
+}
+
 func (eb *EventBus) Emit(eventName string, data []byte) error {
 
 	if err := eb.client.Publish(eventName, data); err != nil {

@@ -17,6 +17,7 @@ func NewManager(opts *Options) *Manager {
 	for i := int32(0); i < opts.Caps; i++ {
 
 		pipeline := &Pipeline{
+			id:         i,
 			bufferSize: opts.BufferSize,
 			handler:    opts.Handler,
 		}

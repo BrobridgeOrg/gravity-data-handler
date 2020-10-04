@@ -1,9 +1,16 @@
 package pipeline
 
+import (
+	"time"
+
+	log "github.com/sirupsen/logrus"
+)
+
 type Pipeline struct {
+	id         int32
 	bufferSize int
 	input      chan interface{}
-	handler    func(interface{}) error
+	handler    func(int32, interface{}) error
 }
 
 func (pipeline *Pipeline) initialize() {
@@ -21,5 +28,16 @@ func (pipeline *Pipeline) initialize() {
 }
 
 func (pipeline *Pipeline) handle(data interface{}) error {
-	return pipeline.handler(data)
+
+	for {
+		err := pipeline.handler(pipeline.id, data)
+		if err == nil {
+			break
+		}
+
+		log.Error(err)
+		time.Sleep(time.Second)
+	}
+
+	return nil
 }
