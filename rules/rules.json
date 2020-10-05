@@ -35,6 +35,30 @@
 		{
 			"event": "accountCreated",
 			"collection": "accounts",
+			"method": "insert",
+			"mapping": [
+				{
+					"source": "id",
+					"target": "id",
+					"primary": true
+				},
+				{
+					"source": "name",
+					"target": "name"
+				},
+				{
+					"source": "type",
+					"target": "type"
+				},
+				{
+					"source": "phone",
+					"target": "phone"
+				}
+			]
+		},
+		{
+			"event": "accountUpdated",
+			"collection": "accounts",
 			"method": "update",
 			"mapping": [
 				{

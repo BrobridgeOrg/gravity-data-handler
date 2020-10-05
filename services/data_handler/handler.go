@@ -2,10 +2,15 @@ package data_handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	app "gravity-data-handler/app/interface"
 	"gravity-data-handler/services/data_handler/pipeline"
 	"reflect"
+	"time"
+
+	pb "github.com/BrobridgeOrg/gravity-api/service/pipeline"
+	"github.com/golang/protobuf/proto"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -33,12 +38,25 @@ func CreateHandler(a app.AppImpl) *Handler {
 
 	// Initialize pipelines
 	opts := pipeline.NewOptions()
-	opts.Handler = func(data interface{}) error {
+	opts.Handler = func(pipelineID int32, data interface{}) error {
 
+		channel := fmt.Sprintf("gravity.pipeline.%d", pipelineID)
+		//log.Info(channel)
 		eb := a.GetEventBus()
-		err := eb.Emit("gravity.store.eventStored", data.([]byte))
+		//err := eb.Emit("gravity.store.eventStored", data.([]byte))
+		resp, err := eb.GetConnection().Request(channel, data.([]byte), time.Second*5)
 		if err != nil {
 			return err
+		}
+
+		var reply pb.PipelineReply
+		err = proto.Unmarshal(resp.Data, &reply)
+		if err != nil {
+			return err
+		}
+
+		if !reply.Success {
+			return errors.New(reply.Reason)
 		}
 
 		return nil
@@ -117,7 +135,11 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 			return err
 		}
 
-		handler.pipeline.Push(primaryKey, data)
+		if primaryKey == "" {
+			handler.pipeline.Dispatch(data)
+		} else {
+			handler.pipeline.Push(primaryKey, data)
+		}
 	}
 
 	return nil
