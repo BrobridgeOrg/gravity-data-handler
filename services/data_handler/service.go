@@ -36,11 +36,11 @@ func CreateService(a app.AppImpl) *Service {
 }
 
 func (service *Service) Push(ctx context.Context, in *pb.PushRequest) (*pb.PushReply, error) {
-
-	log.WithFields(log.Fields{
-		"event": in.EventName,
-	}).Info("Received event")
-
+	/*
+		log.WithFields(log.Fields{
+			"event": in.EventName,
+		}).Info("Received event")
+	*/
 	// Parse payload
 	var payload map[string]interface{}
 	err := json.Unmarshal([]byte(in.Payload), &payload)
