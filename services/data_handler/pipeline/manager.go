@@ -1,6 +1,8 @@
 package pipeline
 
 import (
+	"sync/atomic"
+
 	jump "github.com/lithammer/go-jump-consistent-hash"
 )
 
@@ -47,10 +49,9 @@ func (pm *Manager) Dispatch(data interface{}) {
 
 	// Push data to pipeline
 	pm.pipelines[pm.counter].input <- data
-
 	// Update counter
-	pm.counter++
-	if pm.counter == pm.options.Caps {
-		pm.counter = 0
+	counter := atomic.AddInt32((*int32)(&pm.counter), 1)
+	if counter == pm.options.Caps {
+		atomic.StoreInt32((*int32)(&pm.counter), 0)
 	}
 }
