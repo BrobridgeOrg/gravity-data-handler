@@ -7,10 +7,12 @@ import (
 	app "gravity-data-handler/app/interface"
 	"gravity-data-handler/services/data_handler/pipeline"
 	"reflect"
+	"sync"
 	"time"
 
 	pb "github.com/BrobridgeOrg/gravity-api/service/pipeline"
 	"github.com/golang/protobuf/proto"
+	"github.com/spf13/viper"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -19,6 +21,7 @@ type Handler struct {
 	app        app.AppImpl
 	ruleConfig *RuleConfig
 	pipeline   *pipeline.Manager
+	channels   map[int32]string
 }
 
 type Field struct {
@@ -34,14 +37,35 @@ type Projection struct {
 	Fields     []Field `json:"fields"`
 }
 
+var projectionPool = sync.Pool{
+	New: func() interface{} {
+		return &Projection{}
+	},
+}
+
+var replyPool = sync.Pool{
+	New: func() interface{} {
+		return &pb.PipelineReply{}
+	},
+}
+
 func CreateHandler(a app.AppImpl) *Handler {
+
+	viper.SetDefault("pipeline.size", 256)
+	pipelineSize := viper.GetInt32("pipeline.size")
+
+	channels := make(map[int32]string)
+	for i := int32(0); i <= pipelineSize; i++ {
+		channels[i] = fmt.Sprintf("gravity.pipeline.%d", i)
+	}
 
 	// Initialize pipelines
 	opts := pipeline.NewOptions()
+	opts.Caps = pipelineSize
 	opts.Handler = func(pipelineID int32, data interface{}) error {
 
-		channel := fmt.Sprintf("gravity.pipeline.%d", pipelineID)
-		//log.Info(channel)
+		channel := channels[pipelineID]
+
 		eb := a.GetEventBus()
 		//err := eb.Emit("gravity.store.eventStored", data.([]byte))
 		resp, err := eb.GetConnection().Request(channel, data.([]byte), time.Second*5)
@@ -49,15 +73,25 @@ func CreateHandler(a app.AppImpl) *Handler {
 			return err
 		}
 
-		var reply pb.PipelineReply
-		err = proto.Unmarshal(resp.Data, &reply)
+		// Parsing response
+		reply := replyPool.Get().(*pb.PipelineReply)
+
+		//		var reply pb.PipelineReply
+		err = proto.Unmarshal(resp.Data, reply)
 		if err != nil {
+			// Release
+			replyPool.Put(reply)
 			return err
 		}
 
 		if !reply.Success {
+			// Release
+			replyPool.Put(reply)
 			return errors.New(reply.Reason)
 		}
+
+		// Release
+		replyPool.Put(reply)
 
 		return nil
 	}
@@ -65,6 +99,7 @@ func CreateHandler(a app.AppImpl) *Handler {
 	return &Handler{
 		app:      a,
 		pipeline: pipeline.NewManager(opts),
+		channels: channels,
 	}
 }
 
@@ -103,12 +138,19 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 		}
 
 		// Preparing projection
-		projection := Projection{
-			EventName:  eventName,
-			Collection: rule.Collection,
-			Method:     rule.Method,
-		}
+		projection := projectionPool.Get().(*Projection)
+		projection.EventName = eventName
+		projection.Method = rule.Method
+		projection.Collection = rule.Collection
+		projection.Fields = make([]Field, 0)
 
+		/*
+			projection := Projection{
+				EventName:  eventName,
+				Collection: rule.Collection,
+				Method:     rule.Method,
+			}
+		*/
 		var primaryKey string
 
 		for _, mapping := range rule.Mapping {
