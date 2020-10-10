@@ -11,6 +11,10 @@ import (
 	pb "github.com/BrobridgeOrg/gravity-api/service/data_handler"
 )
 
+var PushSuccess = pb.PushReply{
+	Success: true,
+}
+
 type Service struct {
 	app     app.AppImpl
 	handler *Handler
@@ -60,7 +64,5 @@ func (service *Service) Push(ctx context.Context, in *pb.PushRequest) (*pb.PushR
 		}, nil
 	}
 
-	return &pb.PushReply{
-		Success: true,
-	}, nil
+	return &PushSuccess, nil
 }
