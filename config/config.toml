@@ -6,4 +6,4 @@ host = "0.0.0.0:32803"
 cluster_id = "test-cluster"
 
 [pipeline]
-size = 128
+size = 256
