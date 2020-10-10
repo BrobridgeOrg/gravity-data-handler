@@ -1,7 +1,6 @@
 package data_handler
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	app "gravity-data-handler/app/interface"

@@ -1,8 +1,7 @@
 package data_handler
 
 import (
-	"encoding/json"
-
+	jsoniter "github.com/json-iterator/go"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 
@@ -10,6 +9,8 @@ import (
 
 	pb "github.com/BrobridgeOrg/gravity-api/service/data_handler"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 var PushSuccess = pb.PushReply{
 	Success: true,
