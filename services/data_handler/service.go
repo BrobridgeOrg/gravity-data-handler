@@ -1,8 +1,7 @@
 package data_handler
 
 import (
-	"encoding/json"
-
+	jsoniter "github.com/json-iterator/go"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 
@@ -10,6 +9,12 @@ import (
 
 	pb "github.com/BrobridgeOrg/gravity-api/service/data_handler"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
+
+var PushSuccess = pb.PushReply{
+	Success: true,
+}
 
 type Service struct {
 	app     app.AppImpl
@@ -36,11 +41,11 @@ func CreateService(a app.AppImpl) *Service {
 }
 
 func (service *Service) Push(ctx context.Context, in *pb.PushRequest) (*pb.PushReply, error) {
-
-	log.WithFields(log.Fields{
-		"event": in.EventName,
-	}).Info("Received event")
-
+	/*
+		log.WithFields(log.Fields{
+			"event": in.EventName,
+		}).Info("Received event")
+	*/
 	// Parse payload
 	var payload map[string]interface{}
 	err := json.Unmarshal([]byte(in.Payload), &payload)
@@ -60,7 +65,5 @@ func (service *Service) Push(ctx context.Context, in *pb.PushRequest) (*pb.PushR
 		}, nil
 	}
 
-	return &pb.PushReply{
-		Success: true,
-	}, nil
+	return &PushSuccess, nil
 }

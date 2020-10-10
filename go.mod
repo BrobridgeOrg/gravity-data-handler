@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/BrobridgeOrg/gravity-api v0.0.0-20200816194343-a91dd0fa3335
 	github.com/golang/protobuf v1.4.2
+	github.com/json-iterator/go v1.1.10
 	github.com/lithammer/go-jump-consistent-hash v1.0.1
 	github.com/nats-io/nats-streaming-server v0.17.0 // indirect
 	github.com/nats-io/nats.go v1.9.1

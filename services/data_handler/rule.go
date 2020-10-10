@@ -1,7 +1,6 @@
 package data_handler
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"os"
 )
