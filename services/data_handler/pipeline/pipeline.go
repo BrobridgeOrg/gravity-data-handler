@@ -15,8 +15,9 @@ type Pipeline struct {
 
 func (pipeline *Pipeline) initialize() {
 
+	pipeline.input = make(chan interface{}, pipeline.bufferSize)
+
 	go func() {
-		pipeline.input = make(chan interface{}, pipeline.bufferSize)
 
 		for {
 			select {
@@ -35,7 +36,11 @@ func (pipeline *Pipeline) handle(data interface{}) error {
 			break
 		}
 
-		log.Error(err)
+		log.WithFields(log.Fields{
+			"pipeline": pipeline.id,
+		}).Error(err)
+
+		// Retry in second
 		time.Sleep(time.Second)
 	}
 

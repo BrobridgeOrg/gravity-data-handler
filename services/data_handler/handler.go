@@ -16,6 +16,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+//var counter uint64
+
 type Handler struct {
 	app        app.AppImpl
 	ruleConfig *RuleConfig
@@ -173,8 +175,11 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 		// Publish to event store
 		data, err := json.Marshal(&projection)
 		if err != nil {
+			projectionPool.Put(projection)
 			return err
 		}
+
+		projectionPool.Put(projection)
 
 		if primaryKey == "" {
 			handler.pipeline.Dispatch(data)
@@ -182,6 +187,11 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 			handler.pipeline.Push(primaryKey, data)
 		}
 	}
-
+	/*
+		id := atomic.AddUint64((*uint64)(&counter), 1)
+		if id%1000 == 0 {
+			log.Info(id)
+		}
+	*/
 	return nil
 }
