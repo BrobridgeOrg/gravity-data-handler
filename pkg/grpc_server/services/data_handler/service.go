@@ -5,7 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 
-	app "gravity-data-handler/app/interface"
+	app "github.com/BrobridgeOrg/gravity-data-handler/pkg/app"
 
 	pb "github.com/BrobridgeOrg/gravity-api/service/data_handler"
 )
@@ -17,11 +17,11 @@ var PushSuccess = pb.PushReply{
 }
 
 type Service struct {
-	app     app.AppImpl
+	app     app.App
 	handler *Handler
 }
 
-func CreateService(a app.AppImpl) *Service {
+func NewService(a app.App) *Service {
 
 	// Initialize handler and Load rule config
 	handler := CreateHandler(a)
