@@ -48,7 +48,7 @@ func (service *Service) Push(ctx context.Context, in *pb.PushRequest) (*pb.PushR
 	*/
 	// Parse payload
 	var payload map[string]interface{}
-	err := json.Unmarshal([]byte(in.Payload), &payload)
+	err := json.Unmarshal(in.Payload, &payload)
 	if err != nil {
 		return &pb.PushReply{
 			Success: false,
