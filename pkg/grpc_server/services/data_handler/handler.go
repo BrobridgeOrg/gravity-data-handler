@@ -184,11 +184,7 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 
 		projectionPool.Put(projection)
 
-		if primaryKey == "" {
-			handler.pipeline.Dispatch(data)
-		} else {
-			handler.pipeline.Push(primaryKey, data)
-		}
+		handler.pipeline.Push(primaryKey, data)
 	}
 	/*
 		id := atomic.AddUint64((*uint64)(&counter), 1)
