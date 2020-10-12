@@ -3,7 +3,7 @@ WORKDIR $GOPATH/src/github.com/BrobridgeOrg/gravity-data-handler/
 COPY . .
 
 RUN apk add --update git
-RUN CGO_ENABLED=0 GO111MODULE=on go build -installsuffix cgo -o /gravity-data-handler
+RUN CGO_ENABLED=0 GO111MODULE=on go build -installsuffix cgo -o /gravity-data-handler ./cmd/gravity-data-handler/gravity-data-handler.go
 
 FROM alpine:3.10
 COPY --from=builder /gravity-data-handler /gravity-data-handler
