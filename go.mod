@@ -12,7 +12,7 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/soheilhy/cmux v0.1.4
 	github.com/spf13/viper v1.7.1
-	github.com/stretchr/testify v1.4.0 // indirect
+	go.uber.org/automaxprocs v1.3.0
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
 	google.golang.org/grpc v1.31.0

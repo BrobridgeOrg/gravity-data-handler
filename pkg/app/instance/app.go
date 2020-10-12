@@ -1,6 +1,7 @@
 package instance
 
 import (
+	"runtime"
 	"time"
 
 	eventbus "github.com/BrobridgeOrg/gravity-data-handler/pkg/eventbus/service"
@@ -29,7 +30,9 @@ func NewAppInstance() *AppInstance {
 
 func (a *AppInstance) Init() error {
 
-	log.Info("Starting application")
+	log.WithFields(log.Fields{
+		"max_procs": runtime.GOMAXPROCS(0),
+	}).Info("Starting application")
 
 	// Initializing modules
 	a.muxManager = mux_manager.NewMuxManager(a)

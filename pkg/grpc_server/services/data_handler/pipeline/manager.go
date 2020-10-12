@@ -38,6 +38,11 @@ func NewManager(opts *Options) *Manager {
 
 func (pm *Manager) Push(key string, data interface{}) {
 
+	if key == "" {
+		pm.Dispatch(data)
+		return
+	}
+
 	// Figure out pipeline we will use
 	id := jump.HashString(key, pm.options.Caps, jump.NewCRC64())
 
