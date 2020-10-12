@@ -6,7 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
-	app "gravity-data-handler/app"
+	app "github.com/BrobridgeOrg/gravity-data-handler/pkg/app/instance"
 )
 
 func init() {
@@ -20,6 +20,7 @@ func init() {
 	viper.SetConfigName("config")
 	viper.AddConfigPath("./")
 	viper.AddConfigPath("./config")
+	viper.AddConfigPath("./configs")
 
 	if err := viper.ReadInConfig(); err != nil {
 		log.Warn("No configuration file was loaded")
@@ -29,7 +30,7 @@ func init() {
 func main() {
 
 	// Initializing application
-	a := app.CreateApp()
+	a := app.NewAppInstance()
 
 	err := a.Init()
 	if err != nil {

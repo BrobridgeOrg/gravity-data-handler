@@ -3,13 +3,14 @@ package data_handler
 import (
 	"errors"
 	"fmt"
-	app "gravity-data-handler/app/interface"
-	"gravity-data-handler/services/data_handler/pipeline"
 	"reflect"
 	"sync"
 	"time"
 
+	app "github.com/BrobridgeOrg/gravity-data-handler/pkg/app"
+
 	pb "github.com/BrobridgeOrg/gravity-api/service/pipeline"
+	"github.com/BrobridgeOrg/gravity-data-handler/pkg/grpc_server/services/data_handler/pipeline"
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
 
@@ -19,7 +20,7 @@ import (
 //var counter uint64
 
 type Handler struct {
-	app        app.AppImpl
+	app        app.App
 	ruleConfig *RuleConfig
 	pipeline   *pipeline.Manager
 	channels   map[int32]string
@@ -50,7 +51,7 @@ var replyPool = sync.Pool{
 	},
 }
 
-func CreateHandler(a app.AppImpl) *Handler {
+func CreateHandler(a app.App) *Handler {
 
 	viper.SetDefault("pipeline.size", 256)
 	pipelineSize := viper.GetInt32("pipeline.size")
@@ -156,20 +157,22 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 
 		for _, mapping := range rule.Mapping {
 
-			if val, ok := payload[mapping.Source]; ok {
-
-				if mapping.Primary {
-					primaryKey = handler.getPrimaryValueAsString(val)
-				}
-
-				field := Field{
-					Name:    mapping.Target,
-					Value:   val,
-					Primary: mapping.Primary,
-				}
-
-				projection.Fields = append(projection.Fields, field)
+			val, ok := payload[mapping.Source]
+			if !ok {
+				continue
 			}
+
+			if mapping.Primary {
+				primaryKey = handler.getPrimaryValueAsString(val)
+			}
+
+			field := Field{
+				Name:    mapping.Target,
+				Value:   val,
+				Primary: mapping.Primary,
+			}
+
+			projection.Fields = append(projection.Fields, field)
 		}
 
 		// Publish to event store
