@@ -46,6 +46,7 @@ func (service *Service) Push(ctx context.Context, in *pb.PushRequest) (*pb.PushR
 			"event": in.EventName,
 		}).Info("Received event")
 	*/
+
 	// Parse payload
 	var payload map[string]interface{}
 	err := json.Unmarshal(in.Payload, &payload)
