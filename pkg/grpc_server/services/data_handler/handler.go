@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	app "github.com/BrobridgeOrg/gravity-data-handler/pkg/app"
@@ -17,7 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//var counter uint64
+var counter uint64
 
 type Handler struct {
 	app        app.App
@@ -144,7 +145,7 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 		projection.EventName = eventName
 		projection.Method = rule.Method
 		projection.Collection = rule.Collection
-		projection.Fields = make([]Field, 0)
+		projection.Fields = make([]Field, 0, len(rule.Mapping))
 
 		/*
 			projection := Projection{
@@ -177,20 +178,16 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 
 		// Publish to event store
 		data, err := json.Marshal(&projection)
+		projectionPool.Put(projection)
 		if err != nil {
-			projectionPool.Put(projection)
 			return err
 		}
 
-		projectionPool.Put(projection)
-
 		handler.pipeline.Push(primaryKey, data)
 	}
-	/*
-		id := atomic.AddUint64((*uint64)(&counter), 1)
-		if id%1000 == 0 {
-			log.Info(id)
-		}
-	*/
+	id := atomic.AddUint64((*uint64)(&counter), 1)
+	if id%1000 == 0 {
+		log.Info(id)
+	}
 	return nil
 }

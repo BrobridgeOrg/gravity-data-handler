@@ -1,6 +1,9 @@
 package main
 
 import (
+	"os"
+	"os/signal"
+	"runtime/pprof"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -26,6 +29,23 @@ func init() {
 	if err := viper.ReadInConfig(); err != nil {
 		log.Warn("No configuration file was loaded")
 	}
+
+	go func() {
+
+		f, err := os.Create("cpu-profile.prof")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		pprof.StartCPUProfile(f)
+
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt, os.Kill)
+		<-sig
+		pprof.StopCPUProfile()
+
+		os.Exit(0)
+	}()
 }
 
 func main() {

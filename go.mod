@@ -3,7 +3,7 @@ module github.com/BrobridgeOrg/gravity-data-handler
 go 1.13
 
 require (
-	github.com/BrobridgeOrg/gravity-api v0.2.0
+	github.com/BrobridgeOrg/gravity-api v0.2.2
 	github.com/golang/protobuf v1.4.2
 	github.com/json-iterator/go v1.1.10
 	github.com/lithammer/go-jump-consistent-hash v1.0.1
@@ -22,4 +22,5 @@ require (
 )
 
 //replace github.com/BrobridgeOrg/gravity-api => ../gravity-api
+
 //replace github.com/cfsghost/grpc-connection-pool => /Users/fred/works/opensource/grpc-connection-pool
