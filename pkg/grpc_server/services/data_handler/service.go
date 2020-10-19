@@ -1,6 +1,8 @@
 package data_handler
 
 import (
+	"io"
+
 	jsoniter "github.com/json-iterator/go"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -17,8 +19,9 @@ var PushSuccess = pb.PushReply{
 }
 
 type Service struct {
-	app     app.App
-	handler *Handler
+	app      app.App
+	handler  *Handler
+	incoming chan *pb.PushRequest
 }
 
 func NewService(a app.App) *Service {
@@ -33,9 +36,19 @@ func NewService(a app.App) *Service {
 
 	// Preparing service
 	service := &Service{
-		app:     a,
-		handler: handler,
+		app:      a,
+		handler:  handler,
+		incoming: make(chan *pb.PushRequest, 4096),
 	}
+
+	go service.startWorker()
+	go service.startWorker()
+	go service.startWorker()
+	go service.startWorker()
+	go service.startWorker()
+	go service.startWorker()
+	go service.startWorker()
+	go service.startWorker()
 
 	return service
 }
@@ -47,18 +60,8 @@ func (service *Service) Push(ctx context.Context, in *pb.PushRequest) (*pb.PushR
 		}).Info("Received event")
 	*/
 
-	// Parse payload
-	var payload map[string]interface{}
-	err := json.Unmarshal(in.Payload, &payload)
-	if err != nil {
-		return &pb.PushReply{
-			Success: false,
-			Reason:  err.Error(),
-		}, nil
-	}
-
 	// Handle event
-	err = service.handler.HandleEvent(in.EventName, payload)
+	err := service.push(in.EventName, in.Payload)
 	if err != nil {
 		return &pb.PushReply{
 			Success: false,
@@ -67,4 +70,62 @@ func (service *Service) Push(ctx context.Context, in *pb.PushRequest) (*pb.PushR
 	}
 
 	return &PushSuccess, nil
+}
+
+func (service *Service) PushStream(stream pb.DataHandler_PushStreamServer) error {
+
+	for {
+		in, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+
+		if err != nil {
+			return err
+		}
+		/*
+			id := atomic.AddUint64((*uint64)(&counter), 1)
+
+			if id%1000 == 0 {
+				log.Info(id)
+			}
+		*/
+		service.pushAsync(in)
+	}
+}
+
+// internal implementation
+func (service *Service) startWorker() {
+
+	for {
+		select {
+		case req := <-service.incoming:
+			err := service.push(req.EventName, req.Payload)
+			if err != nil {
+				log.Error(err)
+			}
+		}
+	}
+}
+
+func (service *Service) push(eventName string, payload []byte) error {
+
+	// Parse payload
+	var data map[string]interface{}
+	err := json.Unmarshal(payload, &data)
+	if err != nil {
+		return err
+	}
+
+	// Handle event
+	err = service.handler.HandleEvent(eventName, data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (service *Service) pushAsync(in *pb.PushRequest) error {
+	service.incoming <- in
+	return nil
 }

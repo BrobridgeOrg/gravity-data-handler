@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	app "github.com/BrobridgeOrg/gravity-data-handler/pkg/app"
@@ -184,11 +185,9 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 
 		handler.pipeline.Push(primaryKey, data)
 	}
-	/*
-		id := atomic.AddUint64((*uint64)(&counter), 1)
-		if id%1000 == 0 {
-			log.Info(id)
-		}
-	*/
+	id := atomic.AddUint64((*uint64)(&counter), 1)
+	if id%1000 == 0 {
+		log.Info(id)
+	}
 	return nil
 }
