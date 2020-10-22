@@ -42,13 +42,6 @@ func NewService(a app.App) *Service {
 	}
 
 	go service.startWorker()
-	go service.startWorker()
-	go service.startWorker()
-	go service.startWorker()
-	go service.startWorker()
-	go service.startWorker()
-	go service.startWorker()
-	go service.startWorker()
 
 	return service
 }
@@ -110,15 +103,8 @@ func (service *Service) startWorker() {
 
 func (service *Service) push(eventName string, payload []byte) error {
 
-	// Parse payload
-	var data map[string]interface{}
-	err := json.Unmarshal(payload, &data)
-	if err != nil {
-		return err
-	}
-
 	// Handle event
-	err = service.handler.HandleEvent(eventName, data)
+	err := service.handler.ProcessEvent(eventName, payload)
 	if err != nil {
 		return err
 	}

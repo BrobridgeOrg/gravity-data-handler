@@ -39,6 +39,19 @@ type Projection struct {
 	Fields     []Field `json:"fields"`
 }
 
+type Payload map[string]interface{}
+
+type Event struct {
+	Payload Payload
+	Rule    *Rule
+}
+
+var eventPool = sync.Pool{
+	New: func() interface{} {
+		return &Event{}
+	},
+}
+
 var projectionPool = sync.Pool{
 	New: func() interface{} {
 		return &Projection{}
@@ -61,48 +74,22 @@ func CreateHandler(a app.App) *Handler {
 		channels[i] = fmt.Sprintf("gravity.pipeline.%d", i)
 	}
 
+	handler := &Handler{
+		app:      a,
+		channels: channels,
+	}
+
 	// Initialize pipelines
 	opts := pipeline.NewOptions()
 	opts.Caps = pipelineSize
 	opts.Handler = func(pipelineID int32, data interface{}) error {
-
-		channel := channels[pipelineID]
-
-		eb := a.GetEventBus()
-		//err := eb.Emit("gravity.store.eventStored", data.([]byte))
-		resp, err := eb.GetConnection().Request(channel, data.([]byte), time.Second*5)
-		if err != nil {
-			return err
-		}
-
-		// Parsing response
-		reply := replyPool.Get().(*pb.PipelineReply)
-
-		//		var reply pb.PipelineReply
-		err = proto.Unmarshal(resp.Data, reply)
-		if err != nil {
-			// Release
-			replyPool.Put(reply)
-			return err
-		}
-
-		if !reply.Success {
-			// Release
-			replyPool.Put(reply)
-			return errors.New(reply.Reason)
-		}
-
-		// Release
-		replyPool.Put(reply)
-
-		return nil
+		return handler.ProcessPipelineData(pipelineID, data)
 	}
 
-	return &Handler{
-		app:      a,
-		pipeline: pipeline.NewManager(opts),
-		channels: channels,
-	}
+	// Initializing pipeline
+	handler.pipeline = pipeline.NewManager(opts)
+
+	return handler
 }
 
 func (handler *Handler) LoadRuleFile(filename string) error {
@@ -131,7 +118,31 @@ func (handler *Handler) getPrimaryValueAsString(data interface{}) string {
 	}
 }
 
-func (handler *Handler) HandleEvent(eventName string, payload map[string]interface{}) error {
+func (handler *Handler) findPrimaryKey(rule *Rule, payload Payload) string {
+
+	for _, mapping := range rule.Mapping {
+
+		val, ok := payload[mapping.Source]
+		if !ok {
+			continue
+		}
+
+		if mapping.Primary {
+			return handler.getPrimaryValueAsString(val)
+		}
+	}
+
+	return ""
+}
+
+func (handler *Handler) ProcessEvent(eventName string, data []byte) error {
+
+	// Parse payload
+	var payload Payload
+	err := json.Unmarshal(data, &payload)
+	if err != nil {
+		return err
+	}
 
 	for _, rule := range handler.ruleConfig.Rules {
 
@@ -139,56 +150,95 @@ func (handler *Handler) HandleEvent(eventName string, payload map[string]interfa
 			continue
 		}
 
-		// Preparing projection
-		projection := projectionPool.Get().(*Projection)
-		projection.EventName = eventName
-		projection.Method = rule.Method
-		projection.Collection = rule.Collection
-		projection.Fields = make([]Field, 0, len(rule.Mapping))
+		// Getting primary key
+		primaryKey := handler.findPrimaryKey(&rule, payload)
 
-		/*
-			projection := Projection{
-				EventName:  eventName,
-				Collection: rule.Collection,
-				Method:     rule.Method,
-			}
-		*/
-		var primaryKey string
+		event := eventPool.Get().(*Event)
+		event.Payload = payload
+		event.Rule = &rule
 
-		for _, mapping := range rule.Mapping {
-
-			val, ok := payload[mapping.Source]
-			if !ok {
-				continue
-			}
-
-			if mapping.Primary {
-				primaryKey = handler.getPrimaryValueAsString(val)
-			}
-
-			field := Field{
-				Name:    mapping.Target,
-				Value:   val,
-				Primary: mapping.Primary,
-			}
-
-			projection.Fields = append(projection.Fields, field)
-		}
-
-		// Publish to event store
-		data, err := json.Marshal(&projection)
-		projectionPool.Put(projection)
-		if err != nil {
-			return err
-		}
-
-		handler.pipeline.Push(primaryKey, data)
+		// Push event to pipeline
+		handler.pipeline.Push(primaryKey, event)
 	}
+
 	/*
 		id := atomic.AddUint64((*uint64)(&counter), 1)
 		if id%1000 == 0 {
 			log.Info(id)
 		}
 	*/
+
+	return nil
+}
+
+func (handler *Handler) preparePacket(event *Event) []byte {
+
+	// Preparing projection
+	projection := projectionPool.Get().(*Projection)
+	projection.EventName = event.Rule.Event
+	projection.Method = event.Rule.Method
+	projection.Collection = event.Rule.Collection
+	projection.Fields = make([]Field, 0, len(event.Rule.Mapping))
+
+	for _, mapping := range event.Rule.Mapping {
+
+		// Getting value from payload
+		val, ok := event.Payload[mapping.Source]
+		if !ok {
+			continue
+		}
+
+		field := Field{
+			Name:    mapping.Target,
+			Value:   val,
+			Primary: mapping.Primary,
+		}
+
+		projection.Fields = append(projection.Fields, field)
+	}
+
+	// Convert to packet
+	data, _ := json.Marshal(&projection)
+	projectionPool.Put(projection)
+
+	return data
+}
+
+func (handler *Handler) ProcessPipelineData(pipelineID int32, data interface{}) error {
+
+	event := data.(*Event)
+	packet := handler.preparePacket(event)
+	eventPool.Put(event)
+
+	// Getting channel name
+	channel := handler.channels[pipelineID]
+
+	// Send request
+	eb := handler.app.GetEventBus()
+	resp, err := eb.GetConnection().Request(channel, packet, time.Second*5)
+	if err != nil {
+		return err
+	}
+
+	// Parsing response
+	reply := replyPool.Get().(*pb.PipelineReply)
+
+	//		var reply pb.PipelineReply
+	err = proto.Unmarshal(resp.Data, reply)
+	if err != nil {
+		// Release
+		replyPool.Put(reply)
+		return err
+	}
+
+	if !reply.Success {
+		// Release
+		replyPool.Put(reply)
+		return errors.New(reply.Reason)
+	}
+
+	// Release
+	replyPool.Put(reply)
+
 	return nil
 }
