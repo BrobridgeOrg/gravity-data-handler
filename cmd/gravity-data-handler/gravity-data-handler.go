@@ -1,14 +1,13 @@
 package main
 
 import (
-	"os"
-	"os/signal"
-	"runtime/trace"
+	"runtime"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	_ "go.uber.org/automaxprocs"
+
+	//	_ "go.uber.org/automaxprocs"
 
 	app "github.com/BrobridgeOrg/gravity-data-handler/pkg/app/instance"
 )
@@ -30,26 +29,29 @@ func init() {
 		log.Warn("No configuration file was loaded")
 	}
 
-	go func() {
+	runtime.GOMAXPROCS(128)
+	/*
+		go func() {
 
-		defer os.Exit(0)
+			defer os.Exit(0)
 
-		f, err := os.Create("trace.out")
-		//f, err := os.Create("cpu-profile.prof")
-		if err != nil {
-			log.Fatal(err)
-		}
+			f, err := os.Create("trace.out")
+			//f, err := os.Create("cpu-profile.prof")
+			if err != nil {
+				log.Fatal(err)
+			}
 
-		trace.Start(f)
-		defer trace.Stop()
+			trace.Start(f)
+			defer trace.Stop()
 
-		//		pprof.StartCPUProfile(f)
-		//		defer pprof.StopCPUProfile()
+			//		pprof.StartCPUProfile(f)
+			//		defer pprof.StopCPUProfile()
 
-		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, os.Interrupt, os.Kill)
-		<-sig
-	}()
+			sig := make(chan os.Signal, 1)
+			signal.Notify(sig, os.Interrupt, os.Kill)
+			<-sig
+		}()
+	*/
 }
 
 func main() {
