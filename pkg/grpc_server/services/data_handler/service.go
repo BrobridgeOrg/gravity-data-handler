@@ -38,7 +38,7 @@ func NewService(a app.App) *Service {
 	service := &Service{
 		app:      a,
 		handler:  handler,
-		incoming: make(chan *pb.PushRequest, 4096),
+		incoming: make(chan *pb.PushRequest, 102400),
 	}
 
 	go service.startWorker()
