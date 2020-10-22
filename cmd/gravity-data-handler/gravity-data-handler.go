@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 	"os/signal"
-	"runtime/pprof"
+	"runtime/trace"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -32,19 +32,23 @@ func init() {
 
 	go func() {
 
-		f, err := os.Create("cpu-profile.prof")
+		defer os.Exit(0)
+
+		f, err := os.Create("trace.out")
+		//f, err := os.Create("cpu-profile.prof")
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		pprof.StartCPUProfile(f)
+		trace.Start(f)
+		defer trace.Stop()
+
+		//		pprof.StartCPUProfile(f)
+		//		defer pprof.StopCPUProfile()
 
 		sig := make(chan os.Signal, 1)
 		signal.Notify(sig, os.Interrupt, os.Kill)
 		<-sig
-		pprof.StopCPUProfile()
-
-		os.Exit(0)
 	}()
 }
 
