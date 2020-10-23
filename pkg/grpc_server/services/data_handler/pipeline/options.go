@@ -9,7 +9,7 @@ type Options struct {
 func NewOptions() *Options {
 	return &Options{
 		Caps:       256,
-		BufferSize: 1024,
+		BufferSize: 2048,
 		Handler: func(int32, interface{}) error {
 			return nil
 		},
