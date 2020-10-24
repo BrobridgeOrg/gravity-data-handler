@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"runtime"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -23,6 +24,8 @@ func (pipeline *Pipeline) initialize() {
 			select {
 			case data := <-pipeline.input:
 				pipeline.handle(data)
+			default:
+				runtime.Gosched()
 			}
 		}
 	}()
