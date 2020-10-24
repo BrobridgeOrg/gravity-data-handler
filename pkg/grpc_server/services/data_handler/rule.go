@@ -6,7 +6,7 @@ import (
 )
 
 type RuleConfig struct {
-	Rules []Rule `json:"rules"`
+	Rules []*Rule `json:"rules"`
 }
 
 type Rule struct {
