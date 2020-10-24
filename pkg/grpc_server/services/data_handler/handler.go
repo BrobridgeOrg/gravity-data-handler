@@ -144,7 +144,7 @@ func (handler *Handler) ProcessEvent(eventName string, data []byte) error {
 		return err
 	}
 
-	for _, rule := range handler.ruleConfig.Rules {
+	for idx, rule := range handler.ruleConfig.Rules {
 
 		if rule.Event != eventName {
 			continue
@@ -155,7 +155,7 @@ func (handler *Handler) ProcessEvent(eventName string, data []byte) error {
 
 		event := eventPool.Get().(*Event)
 		event.Payload = payload
-		event.Rule = &rule
+		event.Rule = &handler.ruleConfig.Rules[idx]
 
 		// Push event to pipeline
 		handler.pipeline.Push(primaryKey, event)
@@ -207,6 +207,7 @@ func (handler *Handler) preparePacket(event *Event) []byte {
 func (handler *Handler) ProcessPipelineData(pipelineID int32, data interface{}) error {
 
 	event := data.(*Event)
+	log.Info(event.Rule.Event)
 	packet := handler.preparePacket(event)
 	eventPool.Put(event)
 
