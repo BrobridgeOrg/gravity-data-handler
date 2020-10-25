@@ -9,3 +9,4 @@ maxReconnects = -1
 
 [pipeline]
 size = 256
+workerCount = 32

@@ -7,56 +7,71 @@ import (
 )
 
 type Manager struct {
-	options   *Options
-	pipelines []*Pipeline
-	counter   int32
+	options *Options
+	workers []*Worker
+	counter int32
 }
 
 func NewManager(opts *Options) *Manager {
 
 	// Initialize piplines
-	pipelines := make([]*Pipeline, 0, opts.Caps)
-	for i := int32(0); i < opts.Caps; i++ {
+	workers := make([]*Worker, 0, opts.WorkerCount)
+	for i := int32(0); i < opts.WorkerCount; i++ {
 
-		pipeline := &Pipeline{
+		worker := &Worker{
 			id:         i,
 			bufferSize: opts.BufferSize,
 			handler:    opts.Handler,
 		}
 
-		pipeline.initialize()
+		worker.initialize()
 
-		pipelines = append(pipelines, pipeline)
+		workers = append(workers, worker)
 	}
 
 	return &Manager{
-		options:   opts,
-		pipelines: pipelines,
-		counter:   0,
+		options: opts,
+		workers: workers,
+		counter: 0,
 	}
 }
 
-func (pm *Manager) Push(key string, data interface{}) {
+func (pm *Manager) ComputePipelineID(key string) int32 {
+	if len(key) == 0 {
+		return -1
+	}
 
-	if key == "" {
+	return jump.HashString(key, pm.options.Caps, jump.NewCRC64())
+}
+
+func (pm *Manager) ComputeWorkerID(pipelineID int32) int32 {
+	if pipelineID == -1 {
+		return -1
+	}
+
+	return jump.Hash(uint64(pipelineID), pm.options.WorkerCount)
+}
+
+func (pm *Manager) Push(pipelineID int32, data interface{}) {
+
+	if pipelineID == -1 {
 		pm.Dispatch(data)
 		return
 	}
 
-	// Figure out pipeline we will use
-	id := jump.HashString(key, pm.options.Caps, jump.NewCRC64())
+	workerID := pm.ComputeWorkerID(pipelineID)
 
-	// Push data to pipeline
-	pm.pipelines[id].input <- data
+	// Push data to worker
+	pm.workers[workerID].input <- data
 }
 
 func (pm *Manager) Dispatch(data interface{}) {
 
 	// Push data to pipeline
-	pm.pipelines[pm.counter].input <- data
+	pm.workers[pm.counter].input <- data
 	// Update counter
 	counter := atomic.AddInt32((*int32)(&pm.counter), 1)
-	if counter == pm.options.Caps {
+	if counter == pm.options.WorkerCount {
 		atomic.StoreInt32((*int32)(&pm.counter), 0)
 	}
 }
