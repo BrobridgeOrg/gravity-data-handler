@@ -29,7 +29,7 @@ type Handler struct {
 type Field struct {
 	Name    string      `json:"name"`
 	Value   interface{} `json:"value"`
-	Primary bool        `json:"primary"`
+	Primary bool        `json:"primary,omitempty"`
 }
 
 type Projection struct {
@@ -232,9 +232,12 @@ func (handler *Handler) ProcessPipelineData(pipelineID int32, data interface{}) 
 	}
 
 	if !reply.Success {
+		err = errors.New(reply.Reason)
+
 		// Release
 		replyPool.Put(reply)
-		return errors.New(reply.Reason)
+
+		return err
 	}
 
 	// Release
