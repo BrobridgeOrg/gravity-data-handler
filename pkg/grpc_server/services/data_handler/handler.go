@@ -29,7 +29,7 @@ type Handler struct {
 type Field struct {
 	Name    string      `json:"name"`
 	Value   interface{} `json:"value"`
-	Primary bool        `json:"primary"`
+	Primary bool        `json:"primary,omitempty"`
 }
 
 type Projection struct {
@@ -42,8 +42,9 @@ type Projection struct {
 type Payload map[string]interface{}
 
 type Event struct {
-	Payload Payload
-	Rule    *Rule
+	PipelineID int32
+	Payload    Payload
+	Rule       *Rule
 }
 
 var eventPool = sync.Pool{
@@ -67,7 +68,9 @@ var replyPool = sync.Pool{
 func CreateHandler(a app.App) *Handler {
 
 	viper.SetDefault("pipeline.size", 256)
+	viper.SetDefault("pipeline.workerCount", 32)
 	pipelineSize := viper.GetInt32("pipeline.size")
+	workerCount := viper.GetInt32("pipeline.workerCount")
 
 	channels := make(map[int32]string)
 	for i := int32(0); i <= pipelineSize; i++ {
@@ -82,8 +85,9 @@ func CreateHandler(a app.App) *Handler {
 	// Initialize pipelines
 	opts := pipeline.NewOptions()
 	opts.Caps = pipelineSize
-	opts.Handler = func(pipelineID int32, data interface{}) error {
-		return handler.ProcessPipelineData(pipelineID, data)
+	opts.WorkerCount = workerCount
+	opts.Handler = func(workerID int32, data interface{}) error {
+		return handler.ProcessPipelineData(workerID, data.(*Event))
 	}
 
 	// Initializing pipeline
@@ -154,11 +158,12 @@ func (handler *Handler) ProcessEvent(eventName string, data []byte) error {
 		primaryKey := handler.findPrimaryKey(rule, payload)
 
 		event := eventPool.Get().(*Event)
+		event.PipelineID = handler.pipeline.ComputePipelineID(primaryKey)
 		event.Payload = payload
 		event.Rule = rule
 
 		// Push event to pipeline
-		handler.pipeline.Push(primaryKey, event)
+		handler.pipeline.Push(event.PipelineID, event)
 	}
 
 	/*
@@ -204,14 +209,13 @@ func (handler *Handler) preparePacket(event *Event) []byte {
 	return data
 }
 
-func (handler *Handler) ProcessPipelineData(pipelineID int32, data interface{}) error {
+func (handler *Handler) ProcessPipelineData(workerID int32, event *Event) error {
 
-	event := data.(*Event)
 	packet := handler.preparePacket(event)
 	eventPool.Put(event)
 
 	// Getting channel name
-	channel := handler.channels[pipelineID]
+	channel := handler.channels[event.PipelineID]
 
 	// Send request
 	eb := handler.app.GetEventBus()
@@ -232,9 +236,12 @@ func (handler *Handler) ProcessPipelineData(pipelineID int32, data interface{}) 
 	}
 
 	if !reply.Success {
+		err = errors.New(reply.Reason)
+
 		// Release
 		replyPool.Put(reply)
-		return errors.New(reply.Reason)
+
+		return err
 	}
 
 	// Release

@@ -1,46 +1,43 @@
 package pipeline
 
 import (
-	"runtime"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
-type Pipeline struct {
+type Worker struct {
 	id         int32
 	bufferSize int
 	input      chan interface{}
 	handler    func(int32, interface{}) error
 }
 
-func (pipeline *Pipeline) initialize() {
+func (worker *Worker) initialize() {
 
-	pipeline.input = make(chan interface{}, pipeline.bufferSize)
+	worker.input = make(chan interface{}, worker.bufferSize)
 
 	go func() {
 
 		for {
 			select {
-			case data := <-pipeline.input:
-				pipeline.handle(data)
-			default:
-				runtime.Gosched()
+			case data := <-worker.input:
+				worker.handle(data)
 			}
 		}
 	}()
 }
 
-func (pipeline *Pipeline) handle(data interface{}) error {
+func (worker *Worker) handle(data interface{}) error {
 
 	for {
-		err := pipeline.handler(pipeline.id, data)
+		err := worker.handler(worker.id, data)
 		if err == nil {
 			break
 		}
 
 		log.WithFields(log.Fields{
-			"pipeline": pipeline.id,
+			"worker": worker.id,
 		}).Error(err)
 
 		// Retry in second
