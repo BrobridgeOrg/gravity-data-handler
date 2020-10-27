@@ -11,7 +11,7 @@ func NewOptions() *Options {
 	return &Options{
 		Caps:        256,
 		WorkerCount: 32,
-		BufferSize:  2048,
+		BufferSize:  8192,
 		Handler: func(int32, interface{}) error {
 			return nil
 		},
