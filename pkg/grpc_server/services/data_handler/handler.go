@@ -47,9 +47,20 @@ type Event struct {
 	Rule       *Rule
 }
 
+type Request struct {
+	PipelineID int32
+	Payload    []byte
+}
+
 var eventPool = sync.Pool{
 	New: func() interface{} {
 		return &Event{}
+	},
+}
+
+var requestPool = sync.Pool{
+	New: func() interface{} {
+		return &Request{}
 	},
 }
 
@@ -86,8 +97,11 @@ func CreateHandler(a app.App) *Handler {
 	opts := pipeline.NewOptions()
 	opts.Caps = pipelineSize
 	opts.WorkerCount = workerCount
+	opts.PrepareHandler = func(workerID int32, data interface{}) (interface{}, error) {
+		return handler.PreparePipelineData(workerID, data.(*Event))
+	}
 	opts.Handler = func(workerID int32, data interface{}) error {
-		return handler.ProcessPipelineData(workerID, data.(*Event))
+		return handler.ProcessPipelineData(workerID, data.(*Request))
 	}
 
 	// Initializing pipeline
@@ -209,17 +223,25 @@ func (handler *Handler) preparePacket(event *Event) []byte {
 	return data
 }
 
-func (handler *Handler) ProcessPipelineData(workerID int32, event *Event) error {
+func (handler *Handler) PreparePipelineData(workerID int32, event *Event) (interface{}, error) {
 
-	packet := handler.preparePacket(event)
+	request := requestPool.Get().(*Request)
+	request.PipelineID = event.PipelineID
+	request.Payload = handler.preparePacket(event)
 	eventPool.Put(event)
 
+	return request, nil
+}
+
+func (handler *Handler) ProcessPipelineData(workerID int32, request *Request) error {
+
 	// Getting channel name
-	channel := handler.channels[event.PipelineID]
+	channel := handler.channels[request.PipelineID]
 
 	// Send request
 	eb := handler.app.GetEventBus()
-	resp, err := eb.GetConnection().Request(channel, packet, time.Second*5)
+	resp, err := eb.GetConnection().Request(channel, request.Payload, time.Second*5)
+	requestPool.Put(request)
 	if err != nil {
 		return err
 	}

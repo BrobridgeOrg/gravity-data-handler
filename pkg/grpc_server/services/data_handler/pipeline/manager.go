@@ -19,9 +19,10 @@ func NewManager(opts *Options) *Manager {
 	for i := int32(0); i < opts.WorkerCount; i++ {
 
 		worker := &Worker{
-			id:         i,
-			bufferSize: opts.BufferSize,
-			handler:    opts.Handler,
+			id:             i,
+			bufferSize:     opts.BufferSize,
+			prepareHandler: opts.PrepareHandler,
+			handler:        opts.Handler,
 		}
 
 		worker.initialize()
