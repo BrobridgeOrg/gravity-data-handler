@@ -45,22 +45,22 @@ func (pm *Manager) ComputePipelineID(key string) int32 {
 	return jump.HashString(key, pm.options.Caps, jump.NewCRC64())
 }
 
-func (pm *Manager) ComputeWorkerID(pipelineID int32) int32 {
-	if pipelineID == -1 {
+func (pm *Manager) ComputeWorkerID(key string) int32 {
+	if len(key) == 0 {
 		return -1
 	}
 
-	return jump.Hash(uint64(pipelineID), pm.options.WorkerCount)
+	return jump.HashString(key, pm.options.WorkerCount, jump.NewCRC64())
 }
 
-func (pm *Manager) Push(pipelineID int32, data interface{}) {
+func (pm *Manager) Push(key string, data interface{}) {
 
-	if pipelineID == -1 {
+	workerID := pm.ComputeWorkerID(key)
+
+	if workerID == -1 {
 		pm.Dispatch(data)
 		return
 	}
-
-	workerID := pm.ComputeWorkerID(pipelineID)
 
 	// Push data to worker
 	pm.workers[workerID].input <- data

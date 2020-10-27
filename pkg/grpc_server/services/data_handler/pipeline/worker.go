@@ -20,6 +20,12 @@ func (worker *Worker) initialize() {
 	worker.input = make(chan interface{}, worker.bufferSize)
 	worker.readyMsgs = make(chan interface{}, worker.bufferSize)
 
+	go worker.rawDataReceiver()
+	go worker.messageHandler()
+}
+
+func (worker *Worker) rawDataReceiver() {
+
 	go func() {
 
 		for {
@@ -29,6 +35,9 @@ func (worker *Worker) initialize() {
 			}
 		}
 	}()
+}
+
+func (worker *Worker) messageHandler() {
 
 	go func() {
 

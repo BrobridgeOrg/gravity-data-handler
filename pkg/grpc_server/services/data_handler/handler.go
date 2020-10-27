@@ -177,7 +177,7 @@ func (handler *Handler) ProcessEvent(eventName string, data []byte) error {
 		event.Rule = rule
 
 		// Push event to pipeline
-		handler.pipeline.Push(event.PipelineID, event)
+		handler.pipeline.Push(primaryKey, event)
 	}
 
 	/*
