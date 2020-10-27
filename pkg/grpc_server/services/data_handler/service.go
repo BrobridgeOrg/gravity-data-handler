@@ -41,7 +41,7 @@ func NewService(a app.App) *Service {
 		incoming: make(chan *pb.PushRequest, 204800),
 	}
 
-	go service.startWorker()
+	go service.eventHandler()
 
 	return service
 }
@@ -88,7 +88,7 @@ func (service *Service) PushStream(stream pb.DataHandler_PushStreamServer) error
 }
 
 // internal implementation
-func (service *Service) startWorker() {
+func (service *Service) eventHandler() {
 
 	for {
 		select {
