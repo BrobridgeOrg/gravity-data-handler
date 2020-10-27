@@ -20,10 +20,8 @@ func (worker *Worker) initialize() {
 	go func() {
 
 		for {
-			select {
-			case data := <-worker.input:
-				worker.handle(data)
-			}
+			data := <-worker.input
+			worker.handle(data)
 		}
 	}()
 }
@@ -31,6 +29,7 @@ func (worker *Worker) initialize() {
 func (worker *Worker) handle(data interface{}) error {
 
 	for {
+
 		err := worker.handler(worker.id, data)
 		if err == nil {
 			break

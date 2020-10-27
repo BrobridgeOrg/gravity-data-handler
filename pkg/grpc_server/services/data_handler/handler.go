@@ -226,8 +226,6 @@ func (handler *Handler) ProcessPipelineData(workerID int32, event *Event) error 
 
 	// Parsing response
 	reply := replyPool.Get().(*pb.PipelineReply)
-
-	//		var reply pb.PipelineReply
 	err = proto.Unmarshal(resp.Data, reply)
 	if err != nil {
 		// Release
