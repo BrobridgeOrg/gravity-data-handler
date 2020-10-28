@@ -6,4 +6,4 @@
 
 }
 
-/gravity-data-handler
+exec /gravity-data-handler
