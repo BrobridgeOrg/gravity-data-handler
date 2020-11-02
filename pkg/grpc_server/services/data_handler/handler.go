@@ -11,6 +11,7 @@ import (
 
 	pb "github.com/BrobridgeOrg/gravity-api/service/pipeline"
 	"github.com/BrobridgeOrg/gravity-data-handler/pkg/grpc_server/services/data_handler/pipeline"
+	parallel_chunked_flow "github.com/cfsghost/parallel-chunked-flow"
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
 
@@ -24,6 +25,7 @@ type Handler struct {
 	ruleConfig *RuleConfig
 	pipeline   *pipeline.Manager
 	channels   map[int32]string
+	preprocess *parallel_chunked_flow.ParallelChunkedFlow
 }
 
 type Field struct {
@@ -41,7 +43,13 @@ type Projection struct {
 
 type Payload map[string]interface{}
 
+type RawData struct {
+	EventName string
+	Payload   []byte
+}
+
 type Event struct {
+	PrimaryKey string
 	PipelineID int32
 	Payload    Payload
 	Rule       *Rule
@@ -50,6 +58,12 @@ type Event struct {
 type Request struct {
 	PipelineID int32
 	Payload    []byte
+}
+
+var rawDataPool = sync.Pool{
+	New: func() interface{} {
+		return &RawData{}
+	},
 }
 
 var eventPool = sync.Pool{
@@ -107,7 +121,60 @@ func CreateHandler(a app.App) *Handler {
 	// Initializing pipeline
 	handler.pipeline = pipeline.NewManager(opts)
 
+	// Initialize parapllel chunked flow
+	pcfOpts := &parallel_chunked_flow.Options{
+		BufferSize: 1024000,
+		ChunkSize:  1024,
+		ChunkCount: 128,
+		Handler: func(data interface{}, output chan interface{}) {
+
+			rawData := data.(*RawData)
+
+			// Parse payload
+			var payload Payload
+			err := json.Unmarshal(rawData.Payload, &payload)
+			if err != nil {
+				return
+			}
+
+			eventName := rawData.EventName
+			rawDataPool.Put(rawData)
+
+			for _, rule := range handler.ruleConfig.Rules {
+
+				if rule.Event != eventName {
+					continue
+				}
+
+				// Getting primary key
+				primaryKey := handler.findPrimaryKey(rule, payload)
+
+				event := eventPool.Get().(*Event)
+				event.PrimaryKey = primaryKey
+				event.PipelineID = handler.pipeline.ComputePipelineID(primaryKey)
+				event.Payload = payload
+				event.Rule = rule
+
+				output <- event
+			}
+		},
+	}
+
+	handler.preprocess = parallel_chunked_flow.NewParallelChunkedFlow(pcfOpts)
+
+	go handler.EventReceiver()
+
 	return handler
+}
+
+func (handler *Handler) EventReceiver() {
+	for {
+		select {
+		case event := <-handler.preprocess.Output():
+			// Push event to pipeline
+			handler.pipeline.Push(event.(*Event).PrimaryKey, event)
+		}
+	}
 }
 
 func (handler *Handler) LoadRuleFile(filename string) error {
@@ -155,37 +222,17 @@ func (handler *Handler) findPrimaryKey(rule *Rule, payload Payload) string {
 
 func (handler *Handler) ProcessEvent(eventName string, data []byte) error {
 
-	// Parse payload
-	var payload Payload
-	err := json.Unmarshal(data, &payload)
-	if err != nil {
-		return err
-	}
-
-	for _, rule := range handler.ruleConfig.Rules {
-
-		if rule.Event != eventName {
-			continue
-		}
-
-		// Getting primary key
-		primaryKey := handler.findPrimaryKey(rule, payload)
-
-		event := eventPool.Get().(*Event)
-		event.PipelineID = handler.pipeline.ComputePipelineID(primaryKey)
-		event.Payload = payload
-		event.Rule = rule
-
-		// Push event to pipeline
-		handler.pipeline.Push(primaryKey, event)
-	}
-
 	/*
 		id := atomic.AddUint64((*uint64)(&counter), 1)
 		if id%1000 == 0 {
 			log.Info(id)
 		}
 	*/
+
+	rawData := rawDataPool.Get().(*RawData)
+	rawData.EventName = eventName
+	rawData.Payload = data
+	handler.preprocess.Push(rawData)
 
 	return nil
 }
