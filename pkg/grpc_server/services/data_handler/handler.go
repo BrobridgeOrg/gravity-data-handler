@@ -124,8 +124,8 @@ func CreateHandler(a app.App) *Handler {
 	// Initialize parapllel chunked flow
 	pcfOpts := &parallel_chunked_flow.Options{
 		BufferSize: 1024000,
-		ChunkSize:  1024,
-		ChunkCount: 128,
+		ChunkSize:  512,
+		ChunkCount: 512,
 		Handler: func(data interface{}, output chan interface{}) {
 
 			rawData := data.(*RawData)
