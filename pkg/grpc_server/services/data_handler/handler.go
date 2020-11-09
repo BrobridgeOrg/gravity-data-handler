@@ -8,9 +8,10 @@ import (
 	"time"
 
 	app "github.com/BrobridgeOrg/gravity-data-handler/pkg/app"
+	"github.com/lithammer/go-jump-consistent-hash"
 
 	pb "github.com/BrobridgeOrg/gravity-api/service/pipeline"
-	"github.com/BrobridgeOrg/gravity-data-handler/pkg/grpc_server/services/data_handler/pipeline"
+	"github.com/cfsghost/gosharding"
 	parallel_chunked_flow "github.com/cfsghost/parallel-chunked-flow"
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
@@ -23,8 +24,8 @@ var counter uint64
 type Handler struct {
 	app        app.App
 	ruleConfig *RuleConfig
-	pipeline   *pipeline.Manager
 	channels   map[int32]string
+	shard      *gosharding.Shard
 	preprocess *parallel_chunked_flow.ParallelChunkedFlow
 }
 
@@ -93,9 +94,9 @@ var replyPool = sync.Pool{
 func CreateHandler(a app.App) *Handler {
 
 	viper.SetDefault("pipeline.size", 256)
-	viper.SetDefault("pipeline.workerCount", 32)
+	//	viper.SetDefault("pipeline.workerCount", 32)
 	pipelineSize := viper.GetInt32("pipeline.size")
-	workerCount := viper.GetInt32("pipeline.workerCount")
+	//	workerCount := viper.GetInt32("pipeline.workerCount")
 
 	channels := make(map[int32]string)
 	for i := int32(0); i <= pipelineSize; i++ {
@@ -107,19 +108,8 @@ func CreateHandler(a app.App) *Handler {
 		channels: channels,
 	}
 
-	// Initialize pipelines
-	opts := pipeline.NewOptions()
-	opts.Caps = pipelineSize
-	opts.WorkerCount = workerCount
-	opts.PrepareHandler = func(workerID int32, data interface{}) (interface{}, error) {
-		return handler.PreparePipelineData(workerID, data.(*Event))
-	}
-	opts.Handler = func(workerID int32, data interface{}) error {
-		return handler.ProcessPipelineData(workerID, data.(*Request))
-	}
-
-	// Initializing pipeline
-	handler.pipeline = pipeline.NewManager(opts)
+	// Initializing shard
+	handler.initializeShard()
 
 	// Initialize parapllel chunked flow
 	pcfOpts := &parallel_chunked_flow.Options{
@@ -151,7 +141,7 @@ func CreateHandler(a app.App) *Handler {
 
 				event := eventPool.Get().(*Event)
 				event.PrimaryKey = primaryKey
-				event.PipelineID = handler.pipeline.ComputePipelineID(primaryKey)
+				event.PipelineID = jump.HashString(primaryKey, pipelineSize, jump.NewCRC64())
 				event.Payload = payload
 				event.Rule = rule
 
@@ -172,9 +162,48 @@ func (handler *Handler) EventReceiver() {
 		select {
 		case event := <-handler.preprocess.Output():
 			// Push event to pipeline
-			handler.pipeline.Push(event.(*Event).PrimaryKey, event)
+			handler.shard.PushKV(event.(*Event).PrimaryKey, event)
 		}
 	}
+}
+
+func (handler *Handler) initializeShard() error {
+
+	viper.SetDefault("pipeline.workerCount", 32)
+	workerCount := viper.GetInt32("pipeline.workerCount")
+
+	// Initializing shard
+	options := gosharding.NewOptions()
+	options.PipelineCount = workerCount
+	options.BufferSize = 102400
+	options.PrepareHandler = func(id int32, data interface{}, c chan interface{}) {
+
+		for {
+			data, err := handler.PreparePipelineData(id, data.(*Event))
+			if err == nil {
+				c <- data
+				return
+			}
+
+			time.Sleep(time.Second)
+		}
+	}
+	options.Handler = func(id int32, data interface{}) {
+
+		for {
+			err := handler.ProcessPipelineData(id, data.(*Request))
+			if err == nil {
+				return
+			}
+
+			time.Sleep(time.Second)
+		}
+	}
+
+	// Create shard with options
+	handler.shard = gosharding.NewShard(options)
+
+	return nil
 }
 
 func (handler *Handler) LoadRuleFile(filename string) error {
