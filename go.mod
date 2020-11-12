@@ -1,6 +1,6 @@
 module github.com/BrobridgeOrg/gravity-data-handler
 
-go 1.13
+go 1.15
 
 require (
 	github.com/BrobridgeOrg/gravity-adapter-nats v0.0.0-20201102201841-dd912fffd409 // indirect

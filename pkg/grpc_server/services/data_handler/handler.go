@@ -175,7 +175,7 @@ func (handler *Handler) initializeShard() error {
 	// Initializing shard
 	options := gosharding.NewOptions()
 	options.PipelineCount = workerCount
-	options.BufferSize = 102400
+	options.BufferSize = 10240
 	options.PrepareHandler = func(id int32, data interface{}, c chan interface{}) {
 
 		for {
