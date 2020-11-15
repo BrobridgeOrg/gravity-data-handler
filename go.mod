@@ -5,7 +5,7 @@ go 1.15
 require (
 	github.com/BrobridgeOrg/gravity-adapter-nats v0.0.0-20201102201841-dd912fffd409 // indirect
 	github.com/BrobridgeOrg/gravity-api v0.2.2
-	github.com/cfsghost/gosharding v0.0.2
+	github.com/cfsghost/gosharding v0.0.3
 	github.com/cfsghost/parallel-chunked-flow v0.0.2
 	github.com/golang/protobuf v1.4.2
 	github.com/json-iterator/go v1.1.10
