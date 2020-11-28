@@ -79,6 +79,18 @@
 					"target": "phone"
 				}
 			]
+		},
+		{
+			"event": "accountDeleted",
+			"collection": "accounts",
+			"method": "delete",
+			"mapping": [
+				{
+					"source": "id",
+					"target": "id",
+					"primary": true
+				}
+			]
 		}
 	]
 }
