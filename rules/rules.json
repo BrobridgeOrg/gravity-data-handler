@@ -4,11 +4,11 @@
 			"event": "userCreated",
 			"collection": "users",
 			"method": "update",
+			"primaryKey": "id",
 			"mapping": [
 				{
 					"source": "id",
-					"target": "id",
-					"primary": true
+					"target": "id"
 				},
 				{
 					"source": "name",
@@ -24,6 +24,7 @@
 			"event": "userDeleted",
 			"collection": "users",
 			"method": "delete",
+			"primaryKey": "id",
 			"mapping": [
 				{
 					"source": "id",
@@ -36,11 +37,11 @@
 			"event": "accountCreated",
 			"collection": "accounts",
 			"method": "insert",
+			"primaryKey": "id",
 			"mapping": [
 				{
 					"source": "id",
-					"target": "id",
-					"primary": true
+					"target": "id"
 				},
 				{
 					"source": "name",
@@ -53,6 +54,10 @@
 				{
 					"source": "phone",
 					"target": "phone"
+				},
+				{
+					"source": "attrs",
+					"target": "attrs"
 				}
 			]
 		},
@@ -60,11 +65,11 @@
 			"event": "accountUpdated",
 			"collection": "accounts",
 			"method": "update",
+			"primaryKey": "id",
 			"mapping": [
 				{
 					"source": "id",
-					"target": "id",
-					"primary": true
+					"target": "id"
 				},
 				{
 					"source": "name",
@@ -77,6 +82,10 @@
 				{
 					"source": "phone",
 					"target": "phone"
+				},
+				{
+					"source": "attrs",
+					"target": "attrs"
 				}
 			]
 		},
@@ -84,11 +93,11 @@
 			"event": "accountDeleted",
 			"collection": "accounts",
 			"method": "delete",
+			"primaryKey": "id",
 			"mapping": [
 				{
 					"source": "id",
-					"target": "id",
-					"primary": true
+					"target": "id"
 				}
 			]
 		}

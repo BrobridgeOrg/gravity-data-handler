@@ -39,6 +39,7 @@ type Projection struct {
 	EventName  string  `json:"event"`
 	Collection string  `json:"collection"`
 	Method     string  `json:"method"`
+	PrimaryKey string  `json:"primaryKey"`
 	Fields     []Field `json:"fields"`
 }
 
@@ -234,18 +235,28 @@ func (handler *Handler) getPrimaryValueAsString(data interface{}) string {
 
 func (handler *Handler) findPrimaryKey(rule *Rule, payload Payload) string {
 
-	for _, mapping := range rule.Mapping {
+	if rule.PrimaryKey != "" {
 
-		val, ok := payload[mapping.Source]
+		val, ok := payload[rule.PrimaryKey]
 		if !ok {
-			continue
+			return ""
 		}
 
-		if mapping.Primary {
-			return handler.getPrimaryValueAsString(val)
-		}
+		return handler.getPrimaryValueAsString(val)
 	}
+	/*
+		for _, mapping := range rule.Mapping {
 
+			val, ok := payload[mapping.Source]
+			if !ok {
+				continue
+			}
+
+			if mapping.Primary {
+				return handler.getPrimaryValueAsString(val)
+			}
+		}
+	*/
 	return ""
 }
 
@@ -273,6 +284,7 @@ func (handler *Handler) preparePacket(event *Event) []byte {
 	projection.EventName = event.Rule.Event
 	projection.Method = event.Rule.Method
 	projection.Collection = event.Rule.Collection
+	projection.PrimaryKey = event.Rule.PrimaryKey
 	projection.Fields = make([]Field, 0, len(event.Rule.Mapping))
 
 	for _, mapping := range event.Rule.Mapping {
@@ -284,9 +296,9 @@ func (handler *Handler) preparePacket(event *Event) []byte {
 		}
 
 		field := Field{
-			Name:    mapping.Target,
-			Value:   val,
-			Primary: mapping.Primary,
+			Name:  mapping.Target,
+			Value: val,
+			//			Primary: mapping.Primary,
 		}
 
 		projection.Fields = append(projection.Fields, field)
@@ -295,6 +307,8 @@ func (handler *Handler) preparePacket(event *Event) []byte {
 	// Convert to packet
 	data, _ := json.Marshal(&projection)
 	projectionPool.Put(projection)
+
+	log.Info(string(data))
 
 	return data
 }
