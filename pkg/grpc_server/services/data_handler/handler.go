@@ -287,21 +287,35 @@ func (handler *Handler) preparePacket(event *Event) []byte {
 	projection.PrimaryKey = event.Rule.PrimaryKey
 	projection.Fields = make([]Field, 0, len(event.Rule.Mapping))
 
-	for _, mapping := range event.Rule.Mapping {
+	// pass throuh
+	if len(event.Rule.Mapping) == 0 {
+		for key, value := range event.Payload {
 
-		// Getting value from payload
-		val, ok := event.Payload[mapping.Source]
-		if !ok {
-			continue
+			field := Field{
+				Name:  key,
+				Value: value,
+			}
+
+			projection.Fields = append(projection.Fields, field)
+
 		}
+	} else {
+		for _, mapping := range event.Rule.Mapping {
 
-		field := Field{
-			Name:  mapping.Target,
-			Value: val,
-			//			Primary: mapping.Primary,
+			// Getting value from payload
+			val, ok := event.Payload[mapping.Source]
+			if !ok {
+				continue
+			}
+
+			field := Field{
+				Name:  mapping.Target,
+				Value: val,
+				//			Primary: mapping.Primary,
+			}
+
+			projection.Fields = append(projection.Fields, field)
 		}
-
-		projection.Fields = append(projection.Fields, field)
 	}
 
 	// Convert to packet

@@ -41,7 +41,7 @@
 			"mapping": [
 				{
 					"source": "id",
-					"target": "id"
+					"target": "_id"
 				},
 				{
 					"source": "name",
