@@ -322,8 +322,6 @@ func (handler *Handler) preparePacket(event *Event) []byte {
 	data, _ := json.Marshal(&projection)
 	projectionPool.Put(projection)
 
-	log.Info(string(data))
-
 	return data
 }
 
