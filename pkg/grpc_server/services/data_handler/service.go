@@ -54,7 +54,7 @@ func (service *Service) Push(ctx context.Context, in *pb.PushRequest) (*pb.PushR
 	*/
 
 	// Handle event
-	err := service.push(in.EventName, in.Payload)
+	err := service.push(in.EventName, in.Payload, in.Meta)
 	if err != nil {
 		return &pb.PushReply{
 			Success: false,
@@ -93,7 +93,7 @@ func (service *Service) eventHandler() {
 	for {
 		select {
 		case req := <-service.incoming:
-			err := service.push(req.EventName, req.Payload)
+			err := service.push(req.EventName, req.Payload, req.Meta)
 			if err != nil {
 				log.Error(err)
 			}
@@ -101,10 +101,10 @@ func (service *Service) eventHandler() {
 	}
 }
 
-func (service *Service) push(eventName string, payload []byte) error {
+func (service *Service) push(eventName string, payload []byte, meta map[string][]byte) error {
 
 	// Handle event
-	err := service.handler.ProcessEvent(eventName, payload)
+	err := service.handler.ProcessEvent(eventName, payload, meta)
 	if err != nil {
 		return err
 	}

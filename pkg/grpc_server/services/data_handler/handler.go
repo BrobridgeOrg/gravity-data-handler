@@ -36,11 +36,12 @@ type Field struct {
 }
 
 type Projection struct {
-	EventName  string  `json:"event"`
-	Collection string  `json:"collection"`
-	Method     string  `json:"method"`
-	PrimaryKey string  `json:"primaryKey"`
-	Fields     []Field `json:"fields"`
+	EventName  string            `json:"event"`
+	Collection string            `json:"collection"`
+	Method     string            `json:"method"`
+	PrimaryKey string            `json:"primaryKey"`
+	Fields     []Field           `json:"fields"`
+	Meta       map[string][]byte `json:"meta"`
 }
 
 type Payload map[string]interface{}
@@ -48,6 +49,7 @@ type Payload map[string]interface{}
 type RawData struct {
 	EventName string
 	Payload   []byte
+	Meta      map[string][]byte
 }
 
 type Event struct {
@@ -55,6 +57,7 @@ type Event struct {
 	PipelineID int32
 	Payload    Payload
 	Rule       *Rule
+	Meta       map[string][]byte
 }
 
 type Request struct {
@@ -129,6 +132,7 @@ func CreateHandler(a app.App) *Handler {
 			}
 
 			eventName := rawData.EventName
+			meta := rawData.Meta
 			rawDataPool.Put(rawData)
 
 			for _, rule := range handler.ruleConfig.Rules {
@@ -145,6 +149,7 @@ func CreateHandler(a app.App) *Handler {
 				event.PipelineID = jump.HashString(primaryKey, pipelineSize, jump.NewCRC64())
 				event.Payload = payload
 				event.Rule = rule
+				event.Meta = meta
 
 				output <- event
 			}
@@ -260,7 +265,7 @@ func (handler *Handler) findPrimaryKey(rule *Rule, payload Payload) string {
 	return ""
 }
 
-func (handler *Handler) ProcessEvent(eventName string, data []byte) error {
+func (handler *Handler) ProcessEvent(eventName string, data []byte, meta map[string][]byte) error {
 
 	/*
 		id := atomic.AddUint64((*uint64)(&counter), 1)
@@ -272,6 +277,7 @@ func (handler *Handler) ProcessEvent(eventName string, data []byte) error {
 	rawData := rawDataPool.Get().(*RawData)
 	rawData.EventName = eventName
 	rawData.Payload = data
+	rawData.Meta = meta
 	handler.preprocess.Push(rawData)
 
 	return nil
@@ -286,6 +292,7 @@ func (handler *Handler) preparePacket(event *Event) []byte {
 	projection.Collection = event.Rule.Collection
 	projection.PrimaryKey = event.Rule.PrimaryKey
 	projection.Fields = make([]Field, 0, len(event.Rule.Mapping))
+	projection.Meta = event.Meta
 
 	// pass throuh
 	if len(event.Rule.Mapping) == 0 {
